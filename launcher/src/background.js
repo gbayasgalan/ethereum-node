@@ -18,7 +18,7 @@ import { ProtocolHandler } from "./backend/CustomUrlProtocol.js";
 import path from "path";
 import { readFileSync, existsSync, mkdirSync, renameSync, readdir, rmSync } from "fs";
 import url from "url";
-import checkSigningKeys from "./backend/web3/CSM.js";
+import { checkSigningKeys, getSigningKeysWithQueueInfo } from "./backend/web3/CSM.js";
 const isDevelopment = process.env.NODE_ENV !== "production";
 const nodeConnection = new NodeConnection();
 const storageService = new StorageService();
@@ -50,16 +50,20 @@ log.transports.file.archiveLogFn = async (file) => {
   renameSync(file, `${backupPath}main-${Date.now()}.log`);
 
   let backupLogs = [];
+  let backupAmount = 3;
 
   const storedConfig = await storageService.readConfig();
+  if (storedConfig.logBackups) {
+    backupAmount = storedConfig.logBackups.value;
+  }
 
   readdir(backupPath, (err, files) => {
     files.forEach((file) => {
       backupLogs.push(file);
     });
-    if (backupLogs.length > storedConfig.logBackups.value) {
+    if (backupLogs.length > backupAmount) {
       backupLogs.reverse();
-      for (let i = storedConfig.logBackups.value; i < backupLogs.length; i++) {
+      for (let i = backupAmount; i < backupLogs.length; i++) {
         rmSync(backupPath + backupLogs[i], { force: true }, (err) => {
           if (err) throw err;
         });
@@ -842,6 +846,10 @@ ipcMain.handle("fetchCurrentTimeZone", async () => {
 
 ipcMain.handle("getCSMQueue", async (event, args) => {
   return await checkSigningKeys(args.keysArray, monitoring);
+});
+
+ipcMain.handle("getSigningKeysWithQueueInfo", async () => {
+  return await getSigningKeysWithQueueInfo(monitoring);
 });
 
 ipcMain.handle("getObolClusterInformation", async (event, args) => {
