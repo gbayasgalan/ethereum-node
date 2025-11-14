@@ -50,22 +50,25 @@ test("nimbus validator import", async () => {
           lane: stable
           unattended:
             install: false
+            interval_days: 7
+            hour: 3
+            min: 0
     " > /etc/stereum/stereum.yaml`);
   await nodeConnection.findStereumSettings();
   await nodeConnection.prepareStereumNode(nodeConnection.settings.stereum.settings.controls_install_path);
 
   //install geth
-  let geth = serviceManager.getService("GethService", { network: "holesky", installDir: "/opt/stereum" });
+  let geth = serviceManager.getService("GethService", { network: "hoodi", installDir: "/opt/stereum" });
 
   //install nimbus
   let nimbusBC = serviceManager.getService("NimbusBeaconService", {
-    network: "holesky",
+    network: "hoodi",
     installDir: "/opt/stereum",
     executionClients: [geth],
   });
 
   let nimbusVC = serviceManager.getService("NimbusValidatorService", {
-    network: "holesky",
+    network: "hoodi",
     installDir: "/opt/stereum",
     consensusClients: [nimbusBC],
   });
@@ -98,7 +101,8 @@ test("nimbus validator import", async () => {
     ],
     passwords: ["MyTestPassword", "MyTestPassword", "MyTestPassword"],
   });
-  await validatorAccountManager.importKey(nimbusVC.id);
+  const importResult = await validatorAccountManager.importKey(nimbusVC.id);
+  log.info(importResult);
 
   //get logs
   let condition = false;

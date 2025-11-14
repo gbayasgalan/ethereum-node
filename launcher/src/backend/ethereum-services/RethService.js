@@ -21,6 +21,7 @@ export class RethService extends NodeService {
         `node`,
         `--chain=${network}`,
         `--datadir=${dataDir}`,
+        "--full",
         "--http",
         "--http.port=8545",
         "--http.addr=0.0.0.0",
@@ -75,10 +76,6 @@ export class RethService extends NodeService {
 
   buildExecutionClientMetricsEndpoint() {
     return "stereum-" + this.id + ":6060";
-  }
-
-  buildPrometheusJob() {
-    return `\n  - job_name: stereum-${this.id}\n    static_configs:\n      - targets: [${this.buildExecutionClientMetricsEndpoint()}]`;
   }
 
   getDataDir() {

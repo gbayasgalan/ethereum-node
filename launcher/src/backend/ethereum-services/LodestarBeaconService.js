@@ -60,7 +60,7 @@ export class LodestarBeaconService extends NodeService {
         `--enr.udp=9000`,
       ], //command
       ["node", "./packages/cli/bin/lodestar"], //entrypoint
-      null, //env
+      { NODE_OPTIONS: "--max-old-space-size=8192" }, //env
       ports, //ports
       volumes, //volumes
       null, //user
@@ -97,12 +97,6 @@ export class LodestarBeaconService extends NodeService {
 
   buildConsensusClientMetricsEndpoint() {
     return "stereum-" + this.id + ":8008";
-  }
-
-  buildPrometheusJob() {
-    return `\n  - job_name: stereum-${
-      this.id
-    }\n    metrics_path: /metrics\n    static_configs:\n      - targets: [${this.buildConsensusClientMetricsEndpoint()}]`;
   }
 
   getDataDir() {

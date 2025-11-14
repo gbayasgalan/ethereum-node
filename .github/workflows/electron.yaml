@@ -17,12 +17,12 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Ensure Node Version
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Set Version from package.json
         id: variables
@@ -65,7 +65,7 @@ jobs:
       - name: macOS build args
         if: matrix.os == 'macos-latest'
         run: echo "BUILD_ARGS=--universal" >> $GITHUB_ENV
-      
+
       - name: Install Dependencies
         run: |
           cd launcher && npm i
@@ -155,7 +155,7 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Set Versions
         id: variables

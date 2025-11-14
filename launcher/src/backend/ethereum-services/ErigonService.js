@@ -40,7 +40,7 @@ export class ErigonService extends NodeService {
         "--db.pagesize=16K",
         "--db.size.limit=8TB",
         "--externalcl",
-        "--prune.mode=full",
+        "--prune.mode=minimal",
       ], // command
       [], // entrypoint
       null, // env
@@ -85,12 +85,6 @@ export class ErigonService extends NodeService {
 
   buildExecutionClientMetricsEndpoint() {
     return "stereum-" + this.id + ":6060";
-  }
-
-  buildPrometheusJob() {
-    return `\n  - job_name: stereum-${
-      this.id
-    }\n    metrics_path: /debug/metrics/prometheus\n    static_configs:\n      - targets: [${this.buildExecutionClientMetricsEndpoint()}]`;
   }
 
   getDataDir() {

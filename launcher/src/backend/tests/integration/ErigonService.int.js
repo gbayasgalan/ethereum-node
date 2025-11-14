@@ -48,12 +48,15 @@ test("erigon installation", async () => {
       lane: stable
       unattended:
         install: false
+        interval_days: 7
+        hour: 3
+        min: 0
   " > /etc/stereum/stereum.yaml`);
   await nodeConnection.findStereumSettings();
   await nodeConnection.prepareStereumNode(nodeConnection.settings.stereum.settings.controls_install_path);
 
   //install erigon
-  let executionClient = serviceManager.getService("ErigonService", { network: "holesky", installDir: "/opt/stereum" });
+  let executionClient = serviceManager.getService("ErigonService", { network: "hoodi", installDir: "/opt/stereum" });
 
   let versions = await nodeConnection.nodeUpdates.checkUpdates();
   executionClient.imageVersion = versions[executionClient.network][executionClient.service].slice(-1).pop();

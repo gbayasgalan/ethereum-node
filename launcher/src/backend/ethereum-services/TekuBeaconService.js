@@ -53,13 +53,14 @@ export class TekuBeaconService extends NodeService {
         "--metrics-host-allowlist=*",
         "--metrics-publish-interval=10",
         `--data-path=${dataDir}`,
-        "--data-storage-mode=prune",
+        "--data-storage-mode=minimal",
         "--rest-api-port=5051",
         "--rest-api-host-allowlist=*",
         "--rest-api-interface=0.0.0.0",
         "--rest-api-docs-enabled=true",
         "--rest-api-enabled=true",
         "--log-destination=CONSOLE",
+        "--beacon-liveness-tracking-enabled=true",
       ], // command
       ["/opt/teku/bin/teku"], // entrypoint
       { JAVA_OPTS: "-Xmx6g" }, // env
@@ -102,12 +103,6 @@ export class TekuBeaconService extends NodeService {
 
   buildConsensusClientMetricsEndpoint() {
     return "stereum-" + this.id + ":8008";
-  }
-
-  buildPrometheusJob() {
-    return `\n  - job_name: stereum-${
-      this.id
-    }\n    scrape_timeout: 10s\n    metrics_path: /metrics\n    scheme: http\n    static_configs:\n      - targets: [${this.buildConsensusClientMetricsEndpoint()}]`;
   }
 
   getDataDir() {

@@ -302,9 +302,14 @@ export class ValidatorAccountManager {
       if (picked) return data.slashing_protection;
       return data;
     } catch (err) {
-      this.nodeConnection.taskManager.otherTasksHandler(ref, `Deleting Keys Failed`, false, "Deleting Validators Failed:\n" + err);
+      this.nodeConnection.taskManager.otherTasksHandler(
+        ref,
+        `Deleting Keys Failed`,
+        false,
+        "Deleting Validators Failed:\n" + JSON.stringify(err)
+      );
       this.nodeConnection.taskManager.otherTasksHandler(ref);
-      log.error("Deleting Validators Failed:\n", err);
+      log.error("Deleting Validators Failed:\n", JSON.stringify(err));
       return err;
     }
   }
@@ -1090,7 +1095,7 @@ export class ValidatorAccountManager {
       let charonClient = services.find((service) => service.service === "CharonService");
       if (!charonClient) throw "Couldn't find CharonService";
       const dataDir = path.posix.join(charonClient.getDataDir(), ".charon");
-      await this.nodeConnection.sshService.exec(`rm -rf ${dataDir}`);
+      await this.nodeConnection.sshService.exec(`rm -rf ${charonClient.getDataDir()}`);
       const result = await this.nodeConnection.sshService.uploadDirectorySSH(path.normalize(localPath), dataDir);
       if (result) {
         log.info("Obol Backup uploaded from: ", localPath);
@@ -1115,8 +1120,11 @@ export class ValidatorAccountManager {
         const response = await axios.get(
           `https://api.ssv.network/api/v4/${service.network}/operators/public_key/` + ssvConfig.privateKeyFileData.publicKey
         );
-        if (response.status !== 200 && !response?.data?.data?.id)
-          throw new Error(`Couldn't get Operator ID from SSV Network ${response.status} ${response.statusText}`);
+
+        if (response.status !== 200 || !response?.data?.data?.id)
+          throw new Error(
+            `Couldn't get Operator ID from SSV Network ${response.status} ${response.statusText}${response?.data ? "\n" + JSON.stringify(response.data) : ""}`
+          );
         const operatorID = response.data.data.id;
 
         //get pagination info

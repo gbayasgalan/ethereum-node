@@ -19,6 +19,7 @@
         @reset-name="resetValidatorKeyName"
         @withdraw-single="withdrawModalHandler"
         @confirm-feerecepient="confirmFeeRecepient"
+        @delete-feerecepient="deleteFeeRecepient"
         @delete-preview="deletePreviewKey"
         @confirm-graffiti="confirmEnteredGrafiti"
         @confirm-remote="confirmImportRemoteKeys"
@@ -447,13 +448,21 @@ const confirmFeeRecepient = async () => {
       pubkey: key.key,
       address: stakingStore.enteredFeeRecipientAddress,
     });
-    stakingStore.enteredFeeRecipientAddress = "";
-  } else {
+  }
+  key.selected = false;
+  stakingStore.enteredFeeRecipientAddress = "";
+  stakingStore.setActivePanel(null);
+};
+
+const deleteFeeRecepient = async () => {
+  const key = stakingStore.selectKeyForFee;
+  if (key) {
     await ControlService.deleteFeeRecipient({
       serviceID: key.validatorID,
       pubkey: key.key,
     });
   }
+  key.selected = false;
   stakingStore.enteredFeeRecipientAddress = "";
   stakingStore.setActivePanel(null);
 };
@@ -595,6 +604,26 @@ const exportExitMessage = async () => {
         .filter((item) => item.validatorID === stakingStore.selectedServiceToFilter?.config?.serviceID)
         .map((item) => item.key);
 
+      // if there are more than 50 keys, split them into chunks of 50
+      const chunkSize = 50;
+      if (pubkeys.length > chunkSize) {
+        let allResults = [];
+        for (let i = 0; i < pubkeys.length; i += chunkSize) {
+          const chunk = pubkeys.slice(i, i + chunkSize);
+          const results = await Promise.all(
+            chunk.map(async (key) => {
+              return ControlService.getExitValidatorMessage({
+                pubkey: key,
+                serviceID: stakingStore.selectedServiceToFilter.config?.serviceID,
+              });
+            })
+          );
+          allResults = allResults.concat(results);
+        }
+        saveExitMessage(allResults, "multiple");
+        return;
+      }
+
       const results = await Promise.all(
         pubkeys.map(async (key) => {
           return ControlService.getExitValidatorMessage({
@@ -612,7 +641,13 @@ const exportExitMessage = async () => {
 };
 
 const saveExitMessage = (data, type) => {
-  const content = type === "single" ? JSON.stringify(data, null, 2) : data.map((entry) => JSON.stringify(entry, null, 2)).join("\n\n");
+  // Helper to strip a potential `data` wrapper returned by the API
+  const unwrap = (entry) => (entry && entry.data ? entry.data : entry);
+
+  const content =
+    type === "single"
+      ? JSON.stringify(unwrap(data), null, 2)
+      : "[" + data.map((entry) => JSON.stringify(unwrap(entry), null, 2)).join(",\n") + "]";
 
   const fileName = type === "single" ? "single_exit_message.txt" : "multiple_exit_messages.txt";
   const blob = new Blob([content], { type: "application/json;charset=utf-8" });

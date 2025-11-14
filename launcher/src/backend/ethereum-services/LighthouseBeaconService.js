@@ -48,7 +48,6 @@ export class LighthouseBeaconService extends NodeService {
         `--network=${network}`,
         `--execution-endpoint=${eth1Nodes}`,
         `--execution-jwt=${JWTDir}`,
-        "--eth1-blocks-per-log-query=150",
         `--datadir=${dataDir}`,
         "--http",
         "--http-address=0.0.0.0",
@@ -105,10 +104,6 @@ export class LighthouseBeaconService extends NodeService {
 
   buildConsensusClientMetricsEndpoint() {
     return "stereum-" + this.id + ":5054";
-  }
-
-  buildPrometheusJob() {
-    return `\n  - job_name: stereum-${this.id}\n    static_configs:\n      - targets: [${this.buildConsensusClientMetricsEndpoint()}]`;
   }
 
   getDataDir() {

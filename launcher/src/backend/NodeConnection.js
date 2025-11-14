@@ -29,6 +29,7 @@ export class NodeConnection {
     this.nodeConnectionParams = nodeConnectionParams;
     this.os = null;
     this.osv = null;
+    this.settings = null;
     this.nodeUpdates = new NodeUpdates(this);
     this.configManager = new ConfigManager(this);
   }
@@ -727,15 +728,13 @@ export class NodeConnection {
       }
       let private_key_data;
       try {
-        private_key_data = JSON.parse(private_key);
+        private_key_data = this.normalizeSSVKeystoreData(JSON.parse(private_key));
       } catch (e) {
         throw new Error("Given encrypted SSV private_key (keystore) is invalid (not JSON format)");
       }
-      // SSV generated keystore uses "pubKey" since v1.3.3, previously it was "publicKey"
-      if (!private_key_data?.publicKey && !private_key_data?.pubKey) {
+      if (!private_key_data?.publicKey) {
         throw new Error("Given encrypted SSV private_key (keystore) is invalid (no public key available)");
       }
-      private_key_data.publicKey = private_key_data?.publicKey ? private_key_data.publicKey : private_key_data?.pubKey;
       const newPubKey = private_key_data.publicKey;
 
       // Add password_file and keystore_file to secrets dir
@@ -992,8 +991,7 @@ export class NodeConnection {
         throw new Error(SSHService.extractExecError(keystore_read));
       }
       const keystore_content = keystore_read.stdout;
-      const keystore_data = JSON.parse(keystore_content);
-      keystore_data.publicKey = keystore_data?.publicKey ? keystore_data.publicKey : keystore_data?.pubKey;
+      const keystore_data = this.normalizeSSVKeystoreData(JSON.parse(keystore_content));
       const newPubKey = keystore_data.publicKey;
 
       // Write network config
@@ -1103,8 +1101,7 @@ export class NodeConnection {
         throw new Error(SSHService.extractExecError(keystore_read));
       }
       const keystore_content = keystore_read.stdout;
-      const keystore_data = JSON.parse(keystore_content);
-      keystore_data.publicKey = keystore_data?.publicKey ? keystore_data.publicKey : keystore_data?.pubKey;
+      const keystore_data = this.normalizeSSVKeystoreData(JSON.parse(keystore_content));
       const newPubKey = keystore_data.publicKey;
 
       // Write network config
@@ -1361,8 +1358,7 @@ export class NodeConnection {
         privateKeyFilePath: keyStorePrivateKeyFile,
         privateKeyFileData: (() => {
           try {
-            let pkfdata = JSON.parse(keyStorePrivateKeyFileContent);
-            pkfdata.publicKey = pkfdata?.publicKey ? pkfdata.publicKey : pkfdata?.pubKey;
+            let pkfdata = this.normalizeSSVKeystoreData(JSON.parse(keyStorePrivateKeyFileContent));
             return pkfdata;
           } catch (e) {
             return keyStorePrivateKeyFileContent;
@@ -1551,8 +1547,7 @@ export class NodeConnection {
         privateKeyFilePath: keyStorePrivateKeyFile,
         privateKeyFileData: (() => {
           try {
-            let pkfdata = JSON.parse(keyStorePrivateKeyFileContent);
-            pkfdata.publicKey = pkfdata?.publicKey ? pkfdata.publicKey : pkfdata?.pubKey;
+            let pkfdata = this.normalizeSSVKeystoreData(JSON.parse(keyStorePrivateKeyFileContent));
             return pkfdata;
           } catch (e) {
             return keyStorePrivateKeyFileContent;
@@ -1626,7 +1621,26 @@ export class NodeConnection {
     return;
   }
 
-  // <-------- NEW SSVDKGMODAL END --------->
+  // <-------- NEW SSVMODAL & SSVDKGMODAL HELPERS START --------->
+
+  // SSV keystore field naming for the public key has changed over time:
+  // - v1.3.3 used "pubKey"
+  // - v2.3.5 used "pubkey"
+  // - originally it was "publicKey".
+  // This method ensures that an additional "publicKey" property
+  // is always set, copying from whichever variant is present.
+  normalizeSSVKeystoreData(keystore_data) {
+    keystore_data.publicKey = keystore_data?.publicKey
+      ? keystore_data.publicKey
+      : keystore_data?.publickey
+        ? keystore_data.publickey
+        : keystore_data?.pubKey
+          ? keystore_data.pubKey
+          : keystore_data?.pubkey;
+    return keystore_data;
+  }
+
+  // <-------- NNEW SSVMODAL & SSVDKGMODAL HELPERS END --------->
 
   async readPrometheusConfig(serviceID) {
     let prometheusConfig;
@@ -2111,10 +2125,10 @@ export class NodeConnection {
       this.taskManager.otherTasksHandler(ref, "trigger restart", true);
       await this.sshService.disconnect();
       await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait for the disconnect to be fully done
-      const retry = { connected: false, counter: 0, maxTries: 300 };
+      const retry = { connected: false, counter: 0, maxTries: 60 };
       log.info("Connecting via SSH");
 
-      while (!retry.connected && retry.counter < retry.maxTries) {
+      while (!retry.connected && retry.counter <= retry.maxTries) {
         try {
           retry.counter++;
           log.info(`Trying to connect (${retry.counter})`);
@@ -2131,10 +2145,11 @@ export class NodeConnection {
             true,
             err + "\n\n" + (retry.maxTries - retry.counter) + " tries left."
           );
-          log.info(" Could not connect.\n" + (retry.maxTries - retry.counter) + " tries left.");
+          log.info("Could not connect. " + (retry.maxTries - retry.counter) + " tries left.");
+          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
         }
       }
-      log.info("OUT OF WHILE LOOP");
+
       if (retry.connected) {
         await this.establish(this.taskManager);
         this.taskManager.otherTasksHandler(ref, "Connected", true);

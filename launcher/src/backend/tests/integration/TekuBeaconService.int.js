@@ -49,19 +49,22 @@ test("teku validator import", async () => {
           lane: stable
           unattended:
             install: false
+            interval_days: 7
+            hour: 3
+            min: 0
     " > /etc/stereum/stereum.yaml`);
   await nodeConnection.findStereumSettings();
   await nodeConnection.prepareStereumNode(nodeConnection.settings.stereum.settings.controls_install_path);
 
   //install geth
-  let geth = serviceManager.getService("GethService", { network: "holesky", installDir: "/opt/stereum" });
+  let geth = serviceManager.getService("GethService", { network: "hoodi", installDir: "/opt/stereum" });
 
   //install tekuBC
-  let tekuBC = serviceManager.getService("TekuBeaconService", { network: "holesky", installDir: "/opt/stereum", executionClients: [geth] });
+  let tekuBC = serviceManager.getService("TekuBeaconService", { network: "hoodi", installDir: "/opt/stereum", executionClients: [geth] });
 
   //install tekuVC
   let tekuVC = serviceManager.getService("TekuValidatorService", {
-    network: "holesky",
+    network: "hoodi",
     installDir: "/opt/stereum",
     consensusClients: [tekuBC],
   });
@@ -94,7 +97,8 @@ test("teku validator import", async () => {
     ],
     passwords: ["MyTestPassword", "MyTestPassword", "MyTestPassword"],
   });
-  await validatorAccountManager.importKey(tekuVC.id);
+  const importResult = await validatorAccountManager.importKey(tekuVC.id);
+  log.info(importResult);
 
   //get logs
   let condition = false;

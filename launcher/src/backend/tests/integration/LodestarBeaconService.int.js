@@ -50,20 +50,23 @@ test("lodestar validator import", async () => {
           lane: stable
           unattended:
             install: false
+            interval_days: 7
+            hour: 3
+            min: 0
     " > /etc/stereum/stereum.yaml`);
   await nodeConnection.findStereumSettings();
   await nodeConnection.prepareStereumNode(nodeConnection.settings.stereum.settings.controls_install_path);
 
-  let geth = serviceManager.getService("GethService", { network: "holesky", installDir: "/opt/stereum" });
+  let geth = serviceManager.getService("GethService", { network: "hoodi", installDir: "/opt/stereum" });
 
   let lBC = serviceManager.getService("LodestarBeaconService", {
-    network: "holesky",
+    network: "hoodi",
     installDir: "/opt/stereum",
     executionClients: [geth],
   });
 
   let lVC = serviceManager.getService("LodestarValidatorService", {
-    network: "holesky",
+    network: "hoodi",
     installDir: "/opt/stereum",
     consensusClients: [lBC],
   });
@@ -74,7 +77,8 @@ test("lodestar validator import", async () => {
   lBC.imageVersion = versions[lBC.network][lBC.service].slice(-1).pop();
   lVC.imageVersion = versions[lVC.network][lVC.service].slice(-1).pop();
 
-  await nodeConnection.writeServiceConfiguration(geth.buildConfiguration()), await serviceManager.manageServiceState(geth.id, "started");
+  await nodeConnection.writeServiceConfiguration(geth.buildConfiguration());
+  await serviceManager.manageServiceState(geth.id, "started");
 
   //write configs for lodestar BC and VC
   await nodeConnection.writeServiceConfiguration(lBC.buildConfiguration());
@@ -97,7 +101,8 @@ test("lodestar validator import", async () => {
     ],
     passwords: ["MyTestPassword", "MyTestPassword", "MyTestPassword"],
   });
-  await validatorAccountManager.importKey(lVC.id);
+  const importResult = await validatorAccountManager.importKey(lVC.id);
+  log.info(importResult);
 
   //get logs
   let condition = false;

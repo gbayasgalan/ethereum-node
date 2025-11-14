@@ -48,12 +48,15 @@ test("nethermind installationm", async () => {
               lane: stable
               unattended:
                 install: false
+                interval_days: 7
+                hour: 3
+                min: 0
           " > /etc/stereum/stereum.yaml`);
   await nodeConnection.findStereumSettings();
   await nodeConnection.prepareStereumNode(nodeConnection.settings.stereum.settings.controls_install_path);
 
   //install nethermind
-  let executionClient = serviceManager.getService("NethermindService", { network: "holesky", installDir: "/opt/stereum" });
+  let executionClient = serviceManager.getService("NethermindService", { network: "hoodi", installDir: "/opt/stereum" });
 
   let versions = await nodeConnection.nodeUpdates.checkUpdates();
   executionClient.imageVersion = versions[executionClient.network][executionClient.service].slice(-1).pop();
@@ -69,9 +72,11 @@ test("nethermind installationm", async () => {
     await testServer.Sleep(30000);
     status = await nodeConnection.sshService.exec(`docker logs stereum-${executionClient.id}`);
     if (
-      /Nethermind initialization completed/.test(status.stdout) &&
+      /Initialization Completed/.test(status.stdout) &&
       /Peers/.test(status.stdout) &&
-      /http:\/\/0\.0\.0\.0:8545 ; http:\/\/0\.0\.0\.0:8546 ; http:\/\/0\.0\.0\.0:8551/.test(status.stdout)
+      /http:\/\/0\.0\.0\.0:8545/.test(status.stdout) &&
+      /http:\/\/0\.0\.0\.0:8546/.test(status.stdout) &&
+      /http:\/\/0\.0\.0\.0:8551/.test(status.stdout)
     ) {
       condition = true;
     }
@@ -95,7 +100,9 @@ test("nethermind installationm", async () => {
     expect((docker.stdout.match(new RegExp("Up", "g")) || []).length).toBe(1);
   }
 
-  expect(status.stdout).toMatch(/Nethermind initialization completed/);
+  expect(status.stdout).toMatch(/Initialization Completed/);
   expect(status.stdout).toMatch(/Peers/);
-  expect(status.stdout).toMatch(/http:\/\/0\.0\.0\.0:8545 ; http:\/\/0\.0\.0\.0:8546 ; http:\/\/0\.0\.0\.0:8551/);
+  expect(status.stdout).toMatch(/http:\/\/0\.0\.0\.0:8545/);
+  expect(status.stdout).toMatch(/http:\/\/0\.0\.0\.0:8546/);
+  expect(status.stdout).toMatch(/http:\/\/0\.0\.0\.0:8551/);
 });

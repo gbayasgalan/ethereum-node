@@ -50,21 +50,24 @@ test("prysm validator import", async () => {
           lane: stable
           unattended:
             install: false
+            interval_days: 7
+            hour: 3
+            min: 0
     " > /etc/stereum/stereum.yaml`);
   await nodeConnection.findStereumSettings();
   await nodeConnection.prepareStereumNode(nodeConnection.settings.stereum.settings.controls_install_path);
 
   //install geth
-  let geth = serviceManager.getService("GethService", { network: "holesky", installDir: "/opt/stereum" });
+  let geth = serviceManager.getService("GethService", { network: "hoodi", installDir: "/opt/stereum" });
 
   let prysmBC = serviceManager.getService("PrysmBeaconService", {
-    network: "holesky",
+    network: "hoodi",
     installDir: "/opt/stereum",
     executionClients: [geth],
   });
 
   let prysmVC = serviceManager.getService("PrysmValidatorService", {
-    network: "holesky",
+    network: "hoodi",
     installDir: "/opt/stereum",
     consensusClients: [prysmBC],
   });
@@ -97,7 +100,8 @@ test("prysm validator import", async () => {
     ],
     passwords: ["MyTestPassword", "MyTestPassword", "MyTestPassword"],
   });
-  await validatorAccountManager.importKey(prysmVC.id);
+  const importResult = await validatorAccountManager.importKey(prysmVC.id);
+  log.info(importResult);
 
   await Promise.all([serviceManager.manageServiceState(prysmBC.id, "stopped"), serviceManager.manageServiceState(prysmVC.id, "stopped")]);
 
@@ -118,7 +122,7 @@ test("prysm validator import", async () => {
       /Starting initial chain sync/.test(BCstatus.stderr) &&
       /Connected peers/.test(BCstatus.stderr) &&
       /Connected to new endpoint/.test(BCstatus.stderr) &&
-      /Beacon chain started/.test(VCstatus.stderr) &&
+      /Starting validator node/.test(VCstatus.stderr) &&
       /Waiting for beacon node to sync to latest chain head/.test(VCstatus.stderr)
     ) {
       condition = true;
@@ -181,7 +185,7 @@ test("prysm validator import", async () => {
   expect(BCstatus.stderr).toMatch(/Connected to new endpoint/);
 
   //check prysm VC logs
-  expect(VCstatus.stderr).toMatch(/Beacon chain started/);
+  expect(VCstatus.stderr).toMatch(/Starting validator node/);
   expect(VCstatus.stderr).toMatch(/Waiting for beacon node to sync to latest chain head/);
   expect(runningValidator).toMatch(/Showing .{1} validator accounts/);
 });

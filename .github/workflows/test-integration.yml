@@ -14,10 +14,10 @@ jobs:
       ELTests: ${{ steps.get-EL-tests.outputs.tests }}
       otherTests: ${{ steps.get-other-tests.outputs.tests }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
-          node-version: "19"
+          node-version: 24
       - run: npm install
         working-directory: ./launcher
       - id: get-import-tests
@@ -44,10 +44,10 @@ jobs:
       matrix:
         test: ${{ fromJson(needs.setup.outputs.importTests) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
-          node-version: "19"
+          node-version: 24
       - run: npm install
         working-directory: ./launcher
       - run: npm run test ${{ matrix.test.name }}
@@ -66,10 +66,10 @@ jobs:
       matrix:
         test: ${{ fromJson(needs.setup.outputs.ELTests) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
-          node-version: "19"
+          node-version: 24
       - run: npm install
         working-directory: ./launcher
       - run: npm run test ${{ matrix.test.name }}
@@ -87,13 +87,34 @@ jobs:
       matrix:
         test: ${{ fromJson(needs.setup.outputs.otherTests) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
-          node-version: "19"
+          node-version: 24
       - run: npm install
         working-directory: ./launcher
       - run: npm run test ${{ matrix.test.name }}
+        working-directory: ./launcher
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          IS_DEV: "true"
+
+  Cleanup:
+    runs-on: ubuntu-22.04
+    name: Cleanup
+    needs:
+      - Validator-Import-test
+      - Execution-Client-test
+      - Other-Integration-test
+    if: ${{ always() }} # run even if dependencies failed or were cancelled
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install
+        working-directory: ./launcher
+      - run: npm run test:cleanup
         working-directory: ./launcher
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}

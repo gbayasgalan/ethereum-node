@@ -25,6 +25,9 @@ export class OneClickInstall {
             lane: "stable",
             unattended: {
               install: false,
+              interval_days: 7,
+              hour: 3,
+              min: 0,
             },
           },
         },
@@ -223,7 +226,7 @@ export class OneClickInstall {
       //CharonService
       charon = this.serviceManager.getService("CharonService", {
         ...args,
-        consensusClients: [this.beaconService.filter((service) => service.service !== "OpNodeBeaconService")],
+        consensusClients: this.beaconService.filter((service) => service.service !== "OpNodeBeaconService"),
       });
       this.extraServices.push(charon);
       this.notToStart.push(charon.id);
@@ -300,11 +303,6 @@ export class OneClickInstall {
     if (constellation.includes("GrafanaService")) {
       //GrafanaService
       this.extraServices.push(this.serviceManager.getService("GrafanaService", args));
-    }
-
-    if (constellation.includes("NotificationService")) {
-      //NotificationService
-      this.extraServices.push(this.serviceManager.getService("NotificationService", args));
     }
 
     if (constellation.includes("KeysAPIService")) {
@@ -492,15 +490,7 @@ export class OneClickInstall {
   }
 
   handleArchiveTags(selectedPreset) {
-    if (/mev boost|staking/.test(selectedPreset)) {
-      this.executionClient.forEach((client) => {
-        switch (client.service) {
-          case "RethService":
-            client.command.push("--full");
-            break;
-        }
-      });
-    } else if (selectedPreset == "archive") {
+    if (selectedPreset == "archive") {
       this.executionClient
         .filter(
           (service) => service.service !== "OpGethService" || service.service !== "OpErigonService" || service.service !== "OpRethService"
@@ -513,6 +503,8 @@ export class OneClickInstall {
               break;
             case "RethService":
               // archive by default
+              // remove --full
+              client.command = client.command.filter((c) => !c.includes("--full"));
               break;
             case "ErigonService":
               client.command[client.command.findIndex((c) => c.includes("--prune.mode"))] = "--prune.mode=archive";
@@ -582,7 +574,7 @@ export class OneClickInstall {
     }
     if (this.extraServices.some((s) => s.service === "ValidatorEjectorService")) {
       const moduleIDs = {
-        lidocsm: "4",
+        lidocsm: "3",
         lidossv: "2",
         lidoobol: "2",
       };
@@ -670,7 +662,7 @@ export class OneClickInstall {
     this.clearSetup();
     this.setup = setup;
     this.network = network;
-    let services = ["GrafanaService", "PrometheusNodeExporterService", "PrometheusService", "NotificationService"];
+    let services = ["GrafanaService", "PrometheusNodeExporterService", "PrometheusService"];
 
     // const selectedCC_VC = this.chooseClient(["PRYSM", "LIGHTHOUSE", "NIMBUS", "TEKU", "LODESTAR"]);
     const selectedCC_VC = (() => {
@@ -708,7 +700,6 @@ export class OneClickInstall {
         "GrafanaService",
         "PrometheusNodeExporterService",
         "PrometheusService",
-        "NotificationService",
       ];
 
     switch (setup) {
@@ -724,9 +715,7 @@ export class OneClickInstall {
         services.push("FlashbotsMevBoostService", "CharonService");
         break;
       case "stereum on arm":
-        services = services.filter(
-          (s) => !["GrafanaService", "PrometheusNodeExporterService", "PrometheusService", "NotificationService"].includes(s)
-        );
+        services = services.filter((s) => !["GrafanaService", "PrometheusNodeExporterService", "PrometheusService"].includes(s));
         break;
       case "archive":
         break;

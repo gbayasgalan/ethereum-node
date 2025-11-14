@@ -49,14 +49,17 @@ test("grandine consensus client", async () => {
           lane: stable
           unattended:
             install: false
+            interval_days: 7
+            hour: 3
+            min: 0
     " > /etc/stereum/stereum.yaml`);
   await nodeConnection.findStereumSettings();
   await nodeConnection.prepareStereumNode(nodeConnection.settings.stereum.settings.controls_install_path);
 
-  let geth = serviceManager.getService("GethService", { network: "holesky", installDir: "/opt/stereum" });
+  let geth = serviceManager.getService("GethService", { network: "hoodi", installDir: "/opt/stereum" });
 
   let grandineBC = serviceManager.getService("GrandineBeaconService", {
-    network: "holesky",
+    network: "hoodi",
     installDir: "/opt/stereum",
     executionClients: [geth],
   });
@@ -66,7 +69,8 @@ test("grandine consensus client", async () => {
   geth.imageVersion = versions[geth.network][geth.service].slice(-1).pop();
   grandineBC.imageVersion = versions[grandineBC.network][grandineBC.service].slice(-1).pop();
 
-  await nodeConnection.writeServiceConfiguration(geth.buildConfiguration()), await serviceManager.manageServiceState(geth.id, "started");
+  await nodeConnection.writeServiceConfiguration(geth.buildConfiguration());
+  await serviceManager.manageServiceState(geth.id, "started");
 
   //write configs for grandine BC
   await nodeConnection.writeServiceConfiguration(grandineBC.buildConfiguration());
